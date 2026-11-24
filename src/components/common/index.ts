@@ -14,3 +14,6 @@ export { StatusDot } from './StatusDot';
 export { UserAvatar } from './UserAvatar';
 export { WorkspaceLogo } from './WorkspaceLogo';
 export { SidePanel, SidePanelBody, SidePanelHeader } from './SidePanel';
+export { ThemeModeButton } from './ThemeModeButton';
+export { useThemeModeItems } from './useThemeModeItems';
+export { AuthLayout } from './AuthLayout';

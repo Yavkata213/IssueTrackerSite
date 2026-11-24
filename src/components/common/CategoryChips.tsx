@@ -5,13 +5,14 @@ import { alpha, useTheme } from '@mui/material/styles';
 import { useState } from 'react';
 import type { MouseEvent } from 'react';
 import type { Category } from '../../types';
-import { safeColor } from '../../utils/colors';
+import { readableOnMode, safeColor } from '../../utils/colors';
 
 type Density = 'card' | 'row';
 
 function CategoryChip({ category, density }: { category: Category; density: Density }) {
   const { palette } = useTheme();
   const color = safeColor(category.color, palette.grey[700]);
+  const textColor = readableOnMode(color, palette.mode);
   return (
     <Chip
       size="small"
@@ -21,7 +22,7 @@ function CategoryChip({ category, density }: { category: Category; density: Dens
         borderRadius: density === 'card' ? '11px' : '12px',
         fontSize: 12,
         fontWeight: 500,
-        color,
+        color: textColor,
         bgcolor: alpha(color, 0.12),
         '& .MuiChip-label': { px: density === 'card' ? '18px' : '10px' },
       }}

@@ -11,6 +11,7 @@
 import type { SectionBoardData, SidebarSection, Status, User, WorkspaceSummary } from '../types';
 import { PERMISSION } from '../utils/permissions';
 import { ApiError } from './errors';
+import { currentUserId } from './session';
 import {
   clone,
   findSectionByKey,
@@ -23,7 +24,6 @@ import {
 } from './internal';
 import {
   categories,
-  CURRENT_USER_ID,
   issueRecords,
   pinnedSectionIds,
   sections,
@@ -40,7 +40,7 @@ export * from './workspace';
 
 /** GET /me */
 export async function getCurrentUser(): Promise<User> {
-  const current = users.find((u) => u.id === CURRENT_USER_ID);
+  const current = users.find((u) => u.id === currentUserId());
   if (!current) throw new ApiError('NOT_FOUND', 'Current user not found.');
   return clone(current);
 }
@@ -49,7 +49,7 @@ export async function getCurrentUser(): Promise<User> {
 export async function listWorkspaces(): Promise<WorkspaceSummary[]> {
   return clone(
     workspaces
-      .filter((workspace) => workspaceMembers.some((m) => m.workspaceId === workspace.id && m.userId === CURRENT_USER_ID))
+      .filter((workspace) => workspaceMembers.some((m) => m.workspaceId === workspace.id && m.userId === currentUserId()))
       .map((workspace) => ({
         ...workspace,
         memberCount: workspaceMembers.filter((m) => m.workspaceId === workspace.id).length,
@@ -113,7 +113,7 @@ export async function getSectionBoard(
     permissions: permissionsOf(section.id),
     statuses: sectionStatuses,
     categories: categories.filter((c) => c.sectionId === section.id),
-    members: users.filter((u) => assigneeIds.has(u.id) || u.id === CURRENT_USER_ID),
+    members: users.filter((u) => assigneeIds.has(u.id) || u.id === currentUserId()),
     issues: records.map((r) => ({
       ...r.issue,
       categoryIds: r.categoryIds,
@@ -185,3 +185,7 @@ export async function reorderStatuses(
 }
 export * from './roleMembers';
 export * from './issues';
+export * from './auth';
+export * from './invitations';
+export { hasSession } from './session';
+export * from './workspaces';

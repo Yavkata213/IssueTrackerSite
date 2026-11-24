@@ -7,13 +7,16 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
+import { useState } from 'react';
 import { UserAvatar } from '../../../components/common';
 import { thinScrollbar } from '../../../theme';
-import type { MemberStatus, WorkspaceMember } from '../../../types';
+import type { InvitationInfo, MemberRowStatus, WorkspaceMember } from '../../../types';
 import { formatLastActive } from '../../../utils/dates';
 
 /** Section roles shown as chips; the rest is behind "+N". */
@@ -28,20 +31,23 @@ const COLUMNS = [
   { label: '', width: 80 },
 ] as const;
 
-const STATUS_LABEL: Record<MemberStatus, string> = { ACTIVE: 'Active', DEACTIVATED: 'Deactivated' };
+const STATUS_LABEL: Record<MemberRowStatus, string> = { ACTIVE: 'Active', DEACTIVATED: 'Deactivated', INVITED: 'Invited' };
 
-function StatusChip({ status }: { status: MemberStatus }) {
-  const active = status === 'ACTIVE';
+function StatusChip({ member }: { member: WorkspaceMember }) {
+  const { status } = member;
+  // An invitation whose link ran out is shown as "Expired" until it is sent again or withdrawn.
+  const expired = status === 'INVITED' && member.invitation?.expired === true;
+  const tone = status === 'ACTIVE' ? 'success' : status === 'INVITED' && !expired ? 'info' : null;
   return (
     <Chip
       size="small"
-      label={STATUS_LABEL[status]}
+      label={expired ? 'Expired' : STATUS_LABEL[status]}
       sx={{
         height: 24,
         borderRadius: '12px',
         fontSize: 12,
-        color: active ? 'success.main' : 'text.secondary',
-        bgcolor: active ? (t) => alpha(t.palette.success.main, 0.12) : 'action.selected',
+        color: tone ? `${tone}.main` : 'text.secondary',
+        bgcolor: tone ? (t) => alpha(t.palette[tone].main, 0.12) : 'action.selected',
       }}
     />
   );
@@ -75,8 +81,45 @@ function SectionRoleChips({ member }: { member: WorkspaceMember }) {
   );
 }
 
-function MemberRow({ member }: { member: WorkspaceMember }) {
+interface InvitationActions {
+  onResend: (invitation: InvitationInfo) => void;
+  onRevoke: (invitation: InvitationInfo) => void;
+}
+
+/** Menu of an invitation row: send the link again, or withdraw the invitation. */
+function InvitationMenu({ invitation, actions }: { invitation: InvitationInfo; actions: InvitationActions }) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  return (
+    <>
+      <IconButton aria-label={`Actions for ${invitation.email}`} aria-haspopup="menu" onClick={(event) => setAnchor(event.currentTarget)}>
+        <MoreVertIcon />
+      </IconButton>
+      <Menu anchorEl={anchor} open={anchor !== null} onClose={() => setAnchor(null)}>
+        <MenuItem
+          onClick={() => {
+            setAnchor(null);
+            actions.onResend(invitation);
+          }}
+        >
+          Send invitation again
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setAnchor(null);
+            actions.onRevoke(invitation);
+          }}
+          sx={{ color: 'error.main' }}
+        >
+          Withdraw invitation
+        </MenuItem>
+      </Menu>
+    </>
+  );
+}
+
+function MemberRow({ member, invitationActions }: { member: WorkspaceMember; invitationActions: InvitationActions | null }) {
   const deactivated = member.status === 'DEACTIVATED';
+  const invitation = member.invitation;
   const textColor = deactivated ? 'text.disabled' : 'text.primary';
   return (
     <TableRow hover>
@@ -88,7 +131,7 @@ function MemberRow({ member }: { member: WorkspaceMember }) {
               {member.user.displayName}
             </Typography>
             <Typography variant="caption" noWrap component="div" sx={{ color: deactivated ? 'text.disabled' : 'text.secondary' }}>
-              {member.user.email}
+              {invitation ? (invitation.expired ? 'Invitation expired' : `Invited${invitation.invitedByName ? ` by ${invitation.invitedByName}` : ''}`) : member.user.email}
             </Typography>
           </Box>
         </Box>
@@ -102,7 +145,7 @@ function MemberRow({ member }: { member: WorkspaceMember }) {
         <SectionRoleChips member={member} />
       </TableCell>
       <TableCell>
-        <StatusChip status={member.status} />
+        <StatusChip member={member} />
       </TableCell>
       <TableCell>
         <Typography variant="body2" noWrap sx={{ color: textColor }}>
@@ -110,10 +153,14 @@ function MemberRow({ member }: { member: WorkspaceMember }) {
         </Typography>
       </TableCell>
       <TableCell align="center">
-        {/* Row actions are specified later, so the button has no menu yet. */}
-        <IconButton aria-label={`Actions for ${member.user.displayName}`}>
-          <MoreVertIcon />
-        </IconButton>
+        {invitation && invitationActions ? (
+          <InvitationMenu invitation={invitation} actions={invitationActions} />
+        ) : (
+          // Actions for members are specified later, so the button has no menu yet.
+          <IconButton aria-label={`Actions for ${member.user.displayName}`}>
+            <MoreVertIcon />
+          </IconButton>
+        )}
       </TableCell>
     </TableRow>
   );
@@ -125,13 +172,15 @@ interface MembersTableProps {
   loading: boolean;
   /** False until the first page has arrived. */
   ready: boolean;
+  /** Resend and withdraw for invitation rows; `null` when the user may not invite. */
+  invitationActions: InvitationActions | null;
 }
 
 /**
  * The table fills the card and scrolls inside it; the column header stays at the top.
  * The page itself does not grow with the number of rows.
  */
-export function MembersTable({ members, loading, ready }: MembersTableProps) {
+export function MembersTable({ members, loading, ready, invitationActions }: MembersTableProps) {
   return (
     <TableContainer
       sx={{ flex: 1, minHeight: 0, opacity: loading ? 0.6 : 1, transition: 'opacity 120ms', ...thinScrollbar }}
@@ -169,7 +218,7 @@ export function MembersTable({ members, loading, ready }: MembersTableProps) {
           }}
         >
           {members.map((member) => (
-            <MemberRow key={member.user.id} member={member} />
+            <MemberRow key={member.user.id} member={member} invitationActions={invitationActions} />
           ))}
           {ready && members.length === 0 && (
             <TableRow>

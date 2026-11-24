@@ -16,6 +16,7 @@ import { LIMITS } from '../utils/limits';
 import { PERMISSION, withImplied } from '../utils/permissions';
 import { isValidWorkspaceSlug } from '../utils/workspaceSlug';
 import { ApiError } from './errors';
+import { invitationRows } from './invitations';
 import type { RoleInput } from './internal';
 import {
   cleanText,
@@ -209,7 +210,7 @@ const SORTERS: Record<MemberSort, (a: WorkspaceMember, b: WorkspaceMember) => nu
 /**
  * GET /workspaces/{workspaceId}/members?search=&roleId=&sectionId=&status=&sort=&page=&size=
  * Needs `workspace.members.view`. Filtering, sorting and paging are done by the server.
- * Invited people (the `invitations` table) are not part of this list yet.
+ * Invited people (pending invitations) are rows with status `INVITED`; they have no section roles.
  */
 export async function listWorkspaceMembers(
   workspaceId: string,
@@ -249,11 +250,15 @@ export async function listWorkspaceMembers(
       roleId: record.roleId,
       roleName: roles.find((r) => r.id === record.roleId)?.name ?? '',
       status: record.status,
+      invitation: null,
       joinedAt: record.joinedAt,
       lastActiveAt: record.lastActiveAt,
       sectionRoles,
     });
   }
+
+  // People who were invited and have not joined yet are rows too (status INVITED).
+  rows.push(...invitationRows(workspaceId));
 
   const matching = rows
     .filter(
@@ -271,6 +276,7 @@ export async function listWorkspaceMembers(
     counts: {
       all: rows.length,
       active: rows.filter((m) => m.status === 'ACTIVE').length,
+      invited: rows.filter((m) => m.status === 'INVITED').length,
       deactivated: rows.filter((m) => m.status === 'DEACTIVATED').length,
     },
   });

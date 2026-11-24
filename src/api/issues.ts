@@ -16,8 +16,9 @@ import { LIMITS } from '../utils/limits';
 import { PERMISSION } from '../utils/permissions';
 import { checkRichText, collectImageIds } from '../utils/richText';
 import { ApiError } from './errors';
+import { currentUserId } from './session';
 import { cleanText, clone, findSectionByKey, permissionsOf, requirePermission, requireSection } from './internal';
-import { categories, CURRENT_USER_ID, issueRecords, sectionMembers, statuses, users } from './mockData';
+import { categories, issueRecords, sectionMembers, statuses, users } from './mockData';
 import type { IssueRecord } from './mockData';
 import { assignmentEvents, attachmentRecords, commentRecords } from './mockIssueData';
 import type { AttachmentRecord } from './mockIssueData';
@@ -235,7 +236,7 @@ export async function updateIssue(
     const added = assigneeIds.filter((id) => !record.assigneeIds.includes(id));
     const removed = record.assigneeIds.filter((id) => !assigneeIds?.includes(id));
     const changed = [...added, ...removed];
-    const onlySelf = changed.every((id) => id === CURRENT_USER_ID);
+    const onlySelf = changed.every((id) => id === currentUserId());
     if (
       changed.length > 0 &&
       !granted.includes(PERMISSION.issueAssignOthers) &&
@@ -278,7 +279,7 @@ export async function updateIssue(
         workspaceId,
         issueId,
         userId: id,
-        actorId: CURRENT_USER_ID,
+        actorId: currentUserId(),
         event: 'ASSIGNED',
         createdAt: new Date().toISOString(),
       });
@@ -289,7 +290,7 @@ export async function updateIssue(
         workspaceId,
         issueId,
         userId: id,
-        actorId: CURRENT_USER_ID,
+        actorId: currentUserId(),
         event: 'UNASSIGNED',
         createdAt: new Date().toISOString(),
       });
@@ -314,7 +315,7 @@ export async function setIssueCompleted(
   requirePermission(sectionId, PERMISSION.issueMove);
   const record = findRecord(workspaceId, sectionId, issueId);
   record.issue.completedAt = completed ? new Date().toISOString() : null;
-  record.issue.completedBy = completed ? CURRENT_USER_ID : null;
+  record.issue.completedBy = completed ? currentUserId() : null;
   record.issue.updatedAt = new Date().toISOString();
   return buildDetail(workspaceId, record);
 }
@@ -349,14 +350,14 @@ export async function addComment(
     id: crypto.randomUUID(),
     workspaceId,
     issueId,
-    authorId: CURRENT_USER_ID,
+    authorId: currentUserId(),
     parentCommentId: parentId,
     body,
     createdAt: new Date().toISOString(),
     editedAt: null,
   };
   commentRecords.push(record);
-  return clone({ ...record, author: userOf(CURRENT_USER_ID) });
+  return clone({ ...record, author: userOf(currentUserId()) });
 }
 
 // ---- Attachments ----------------------------------------------------
@@ -384,7 +385,7 @@ export async function uploadAttachment(
       id: crypto.randomUUID(),
       workspaceId,
       issueId,
-      uploadedBy: CURRENT_USER_ID,
+      uploadedBy: currentUserId(),
       fileName: file.name.slice(0, 200),
       contentType: file.type,
       sizeBytes: file.size,

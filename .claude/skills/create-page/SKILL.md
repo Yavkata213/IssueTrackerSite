@@ -26,7 +26,7 @@ For a larger page, give a short plan (files, routes, API functions, shared compo
 - Look in `src/components/common/` and `src/theme/` first. Use existing components (`UserAvatar`, `AssigneeGroup`, `PriorityChip`, `CategoryChips`, `CountBadge`, `DueDateLabel`, `SectionIcon`, `SelectButton`, `StatusDot`, `LoadError`, `ErrorToast`, `SaveBar`, `ConfirmDialog`, `WorkspaceLogo`, `SidePanel`) and the layout (`PageLayout`, `AppShell`). Settings-style pages (list + editor, floating save bar) use the shared pieces in `src/components/settings/` (`SettingsTabSelect`, `ListPanel`, `EditorParts`, `RoleEditor`, `PermissionList`, `useEditorDraft`) and follow `src/features/section-settings/` and `src/features/workspace-settings/`. A table that must not grow the page (members) scrolls inside its card with a sticky header and a pinned footer: see `workspace-settings/members/`. Anything that slides in from the right uses `SidePanel` (+ `SidePanelHeader`, `SidePanelBody`): see `RoleMembersPanel` and `features/issue/IssuePanel.tsx`. Rich text goes through `components/editor/RichTextEditor` (stored as JSON, never HTML); an issue-style page with two layouts (full page and panel) shares its parts like `features/issue/`.
 - Shared helpers: `src/utils/colors.ts` (`safeColor`), `src/utils/permissions.ts` (`PERMISSION`, `hasPermission`), `src/utils/sectionKey.ts` (`isValidSectionKey`), `src/app/paths.ts` (`paths`, `routePatterns`).
 - A piece used by more than one page goes to `src/components/common/` and is exported from its `index.ts`. Never copy styles between pages.
-- Use MUI components and theme tokens (`palette`, `spacing`, `shape`). No hard-coded colours in components. A new token goes into the theme (with module augmentation if it is a custom key).
+- Use MUI components and theme tokens (`palette`, `spacing`, `shape`). No hard-coded colours in components. A new token goes into the theme (with module augmentation if it is a custom key). The theme has a light and a dark variant (`src/theme/theme.ts`, chosen in `ThemeModeProvider`): a new token needs a value in both, and a component must look right in both (check it in the browser with the theme menu). Text that sits on a tint of a data colour (category chips) goes through `readableOnMode`.
 - Page code goes to `src/features/<page-name>/`, one folder per page, sub-folders for large parts (like `board/`, `table/`).
 
 ## 3. Data: only through `src/api`
@@ -79,7 +79,8 @@ Treat all data from the API as untrusted, even from our own backend.
 - [ ] Switching the workspace while on the page ends in a valid state.
 - [ ] View/filter state that should be shareable is in the URL (`?view=`), the rest stays in component state.
 - [ ] Breadcrumbs match the design and the page title/heading is correct.
-- [ ] Routes that need a login or permission are guarded in one place (route wrapper), not per page. Until auth exists, mark the spot with a short comment.
+- [ ] Routes that need a login are guarded in one place: they sit inside `RequireAuth` in `src/App.tsx` (pages that need no sign-in, like sign-in and invitations, go above it, under `src/features/auth/`). Permissions are checked from the data of the page, never per route guard.
+- [ ] The signed-in user comes from `useAuth()` / `useWorkspace()`; the API reads it from the session in `src/api/session.ts`. Never pass a user id from the UI as "who I am".
 
 ## 6. Build and verify
 

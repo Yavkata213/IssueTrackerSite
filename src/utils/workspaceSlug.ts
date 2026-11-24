@@ -19,3 +19,15 @@ export function normalizeWorkspaceSlugInput(value: string): string {
 
 /** The part of the workspace URL after the slug. Shown as fixed text next to the field. */
 export const WORKSPACE_URL_SUFFIX = '.tracker.example.com';
+
+/** Suggests a URL from a workspace name: "Acme Design Studio" -> "acme-design-studio". */
+export function slugFromName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, LIMITS.workspaceSlugMax)
+    .replace(/-+$/g, '');
+}

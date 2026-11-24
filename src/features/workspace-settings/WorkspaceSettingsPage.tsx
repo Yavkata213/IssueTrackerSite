@@ -151,7 +151,13 @@ function WorkspaceSettingsContent() {
         )}
         {tab === 'members' && (
           <Box sx={panel('members')}>
-            <MembersTab workspaceId={workspace.id} roles={data.roles} sections={data.sections} permissions={permissions} />
+            <MembersTab
+              workspaceId={workspace.id}
+              roles={data.roles}
+              sections={data.sections}
+              permissions={permissions}
+              defaultRoleId={data.workspace.defaultRoleId}
+            />
           </Box>
         )}
       </Box>

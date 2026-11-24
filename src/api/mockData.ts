@@ -29,7 +29,7 @@ function timestampDaysAgo(days: number): string {
 
 // ---- Users ----------------------------------------------------------
 
-export const CURRENT_USER_ID = 'user-maria';
+export const SEED_OWNER_ID = 'user-maria';
 
 function user(id: string, displayName: string, email: string): User {
   return { id, email, displayName, avatarUrl: null };
@@ -51,7 +51,7 @@ export const workspaces: Workspace[] = [
     id: 'ws-acme',
     name: 'Acme Studio',
     slug: 'acme-studio',
-    ownerId: CURRENT_USER_ID,
+    ownerId: SEED_OWNER_ID,
     logoUrl: null,
     defaultRoleId: 'ws-acme-wrole-member',
   },
@@ -146,22 +146,10 @@ function role(workspaceId: string, name: string, description: string, isSystem: 
   return { id: `${workspaceId}-role-${name.toLowerCase()}`, workspaceId, scope: 'SECTION', name, description, isSystem };
 }
 
-export const roles: Role[] = ['ws-acme', 'ws-globex'].flatMap((workspaceId) => [
-  role(workspaceId, 'Admin', 'Full control of the section: settings, categories, statuses and roles.', true),
-  role(workspaceId, 'Agent', 'Works issues day to day: assigns, updates and closes them.', false),
-  role(workspaceId, 'Member', 'Standard access: can move issues between statuses.', true),
-  role(workspaceId, 'Viewer', 'Can view the section and its issues.', true),
-]);
+export const roles: Role[] = [];
 
 /** Permission keys per role id (stand-in for role_permissions). */
-export const rolePermissionKeys: Record<string, string[]> = Object.fromEntries(
-  ['ws-acme', 'ws-globex'].flatMap((workspaceId) => [
-    [`${workspaceId}-role-admin`, [...ALL_PERMISSION_KEYS]],
-    [`${workspaceId}-role-agent`, [...ISSUE_PERMISSION_KEYS, PERMISSION.categoriesManage]],
-    [`${workspaceId}-role-member`, [PERMISSION.issueMove]],
-    [`${workspaceId}-role-viewer`, []],
-  ]),
-);
+export const rolePermissionKeys: Record<string, string[]> = {};
 
 export interface SectionMemberRecord {
   workspaceId: string;
@@ -230,18 +218,34 @@ function workspaceRole(workspaceId: string, name: string, description: string, i
   return { id: workspaceRoleId(workspaceId, name), workspaceId, scope: 'WORKSPACE', name, description, isSystem };
 }
 
-for (const workspaceId of ['ws-acme', 'ws-globex']) {
+/**
+ * The roles every workspace starts with, as the backend creates them from a template in the same
+ * transaction as the workspace: four workspace roles (Owner, Co-admin, People manager, Member) and
+ * four section roles (Admin, Agent, Member, Viewer), each with its permissions.
+ */
+export function createDefaultRoles(workspaceId: string): { ownerRoleId: string; defaultRoleId: string } {
   roles.push(
     workspaceRole(workspaceId, 'Owner', 'Full control of the workspace. Cannot be changed or deleted.', true),
     workspaceRole(workspaceId, 'Co-admin', 'Runs the workspace together with the owner.', false),
     workspaceRole(workspaceId, 'People manager', 'Manages accounts and keeps an eye on workspace activity.', false),
     workspaceRole(workspaceId, 'Member', 'Standard access. Access to sections is set by section roles.', false),
+    role(workspaceId, 'Admin', 'Full control of the section: settings, categories, statuses and roles.', true),
+    role(workspaceId, 'Agent', 'Works issues day to day: assigns, updates and closes them.', false),
+    role(workspaceId, 'Member', 'Standard access: can move issues between statuses.', true),
+    role(workspaceId, 'Viewer', 'Can view the section and its issues.', true),
   );
   rolePermissionKeys[workspaceRoleId(workspaceId, 'Owner')] = [...ALL_WORKSPACE_KEYS];
   rolePermissionKeys[workspaceRoleId(workspaceId, 'Co-admin')] = [...ALL_WORKSPACE_KEYS];
   rolePermissionKeys[workspaceRoleId(workspaceId, 'People manager')] = [PERMISSION.workspaceSectionsAudit, ...MEMBERS_KEYS];
   rolePermissionKeys[workspaceRoleId(workspaceId, 'Member')] = [];
+  rolePermissionKeys[`${workspaceId}-role-admin`] = [...ALL_PERMISSION_KEYS];
+  rolePermissionKeys[`${workspaceId}-role-agent`] = [...ISSUE_PERMISSION_KEYS, PERMISSION.categoriesManage];
+  rolePermissionKeys[`${workspaceId}-role-member`] = [PERMISSION.issueMove];
+  rolePermissionKeys[`${workspaceId}-role-viewer`] = [];
+  return { ownerRoleId: workspaceRoleId(workspaceId, 'Owner'), defaultRoleId: workspaceRoleId(workspaceId, 'Member') };
 }
+
+for (const workspaceId of ['ws-acme', 'ws-globex']) createDefaultRoles(workspaceId);
 
 export interface WorkspaceMemberRecord {
   workspaceId: string;

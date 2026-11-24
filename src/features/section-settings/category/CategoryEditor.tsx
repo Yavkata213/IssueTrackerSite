@@ -9,7 +9,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import type { ReactNode } from 'react';
 import { useId } from 'react';
 import type { CategoryDetail } from '../../../types';
-import { isHexColor, safeColor } from '../../../utils/colors';
+import { isHexColor, readableOnMode, safeColor } from '../../../utils/colors';
 import { LIMITS } from '../../../utils/limits';
 import { EditorCard, EditorHeader, fieldHeight, FieldLabel } from '../../../components/settings';
 import { ColorSwatches } from './ColorSwatches';
@@ -167,7 +167,7 @@ export function CategoryEditor({ category, draft, sectionName, canEdit, nameErro
               <Chip
                 size="small"
                 label={draft.name.trim() || category.name}
-                sx={{ height: 24, borderRadius: '12px', fontWeight: 500, color, bgcolor: alpha(color, 0.12), '& .MuiChip-label': { px: '14px' } }}
+                sx={{ height: 24, borderRadius: '12px', fontWeight: 500, color: readableOnMode(color, palette.mode), bgcolor: alpha(color, 0.12), '& .MuiChip-label': { px: '14px' } }}
               />
               <Chip
                 size="small"

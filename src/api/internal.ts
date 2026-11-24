@@ -5,9 +5,9 @@ import type { Permission, RoleScope, Section, Workspace } from '../types';
 import { LIMITS } from '../utils/limits';
 import type { PermissionKey } from '../utils/permissions';
 import { ApiError } from './errors';
+import { currentUserId } from './session';
 import {
   auditLog,
-  CURRENT_USER_ID,
   rolePermissionKeys,
   roles,
   sectionKeyHistory,
@@ -49,7 +49,7 @@ export function requireWorkspace(workspaceId: string): Workspace {
 
 function currentWorkspaceMembership(workspaceId: string) {
   return workspaceMembers.find(
-    (m) => m.workspaceId === workspaceId && m.userId === CURRENT_USER_ID && m.status === 'ACTIVE',
+    (m) => m.workspaceId === workspaceId && m.userId === currentUserId() && m.status === 'ACTIVE',
   );
 }
 
@@ -72,7 +72,7 @@ export function requireWorkspacePermission(workspaceId: string, key: PermissionK
 }
 
 function currentMembership(sectionId: string) {
-  return sectionMembers.find((m) => m.sectionId === sectionId && m.userId === CURRENT_USER_ID);
+  return sectionMembers.find((m) => m.sectionId === sectionId && m.userId === currentUserId());
 }
 
 /** Name of the current user's role in the section. */
@@ -105,7 +105,7 @@ export function recordAudit(entry: Omit<AuditEntry, 'id' | 'actorId' | 'createdA
   auditLog.push({
     ...entry,
     id: crypto.randomUUID(),
-    actorId: CURRENT_USER_ID,
+    actorId: currentUserId(),
     createdAt: new Date().toISOString(),
   });
 }

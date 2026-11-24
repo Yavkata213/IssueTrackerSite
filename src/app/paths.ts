@@ -11,6 +11,12 @@ export const paths = {
   presets: '/presets',
   auditLog: '/audit-log',
   workspaceSettings: '/workspace-settings',
+  signIn: '/sign-in',
+  signUp: '/sign-up',
+  forgotPassword: '/forgot-password',
+  verifyEmail: (token: string) => `/verify-email/${encodeURIComponent(token)}`,
+  resetPassword: (token: string) => `/reset-password/${encodeURIComponent(token)}`,
+  invitation: (token: string) => `/invitations/${encodeURIComponent(token)}`,
   workspaceSettingsTab: (tab?: WorkspaceSettingsTab) =>
     `/workspace-settings${tab && tab !== 'general' ? `?tab=${tab}` : ''}`,
   /** Path segments built from data are always encoded. */
@@ -28,4 +34,7 @@ export const routePatterns = {
   section: '/sections/:key',
   sectionSettings: '/sections/:key/settings',
   issue: '/issues/:issueKey',
+  resetPassword: '/reset-password/:token',
+  verifyEmail: '/verify-email/:token',
+  invitation: '/invitations/:token',
 } as const;

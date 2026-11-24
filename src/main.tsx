@@ -3,21 +3,18 @@ import '@fontsource/roboto/500.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-import CssBaseline from '@mui/material/CssBaseline'
-import { ThemeProvider } from '@mui/material/styles'
 import App from './App.tsx'
-import { WorkspaceProvider } from './app/WorkspaceProvider.tsx'
-import { theme } from './theme'
+import { AuthProvider } from './app/AuthProvider.tsx'
+import { ThemeModeProvider } from './app/ThemeModeProvider.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <ThemeModeProvider>
       <BrowserRouter>
-        <WorkspaceProvider>
+        <AuthProvider>
           <App />
-        </WorkspaceProvider>
+        </AuthProvider>
       </BrowserRouter>
-    </ThemeProvider>
+    </ThemeModeProvider>
   </StrictMode>,
 )

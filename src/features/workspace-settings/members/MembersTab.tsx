@@ -15,9 +15,11 @@ import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { getErrorMessage, listWorkspaceMembers } from '../../../api';
-import { LoadError } from '../../../components/common';
+import { getErrorMessage, listWorkspaceMembers, resendInvitation, revokeInvitation } from '../../../api';
+import { ConfirmDialog, ErrorToast, LoadError } from '../../../components/common';
 import type {
+  InvitationInfo,
+  InvitationSent,
   MemberSort,
   MemberStatusFilter,
   RoleDetail,
@@ -27,12 +29,15 @@ import type {
 } from '../../../types';
 import { LIMITS } from '../../../utils/limits';
 import { hasPermission, PERMISSION } from '../../../utils/permissions';
+import { AddUserDialog } from './AddUserDialog';
+import { InvitationLinkDialog } from './InvitationLinkDialog';
 import { MembersTable } from './MembersTable';
 
 const PAGE_SIZE = 10;
 const ALL = 'ALL';
 
 const SORT_LABELS: Record<MemberSort, string> = { name: 'Name', lastActive: 'Last active', joined: 'Joined' };
+const STATUS_LABELS: Record<MemberStatusFilter, string> = { ALL: 'All', ACTIVE: 'Active', INVITED: 'Invited', DEACTIVATED: 'Deactivated' };
 
 type Filters = Omit<WorkspaceMemberQuery, 'pageSize'>;
 
@@ -115,15 +120,22 @@ interface MembersTabProps {
   sections: Section[];
   /** Workspace permission keys of the current user. */
   permissions: string[];
+  /** The role a new invitation starts with. */
+  defaultRoleId: string | null;
 }
 
 /** Members of the workspace: status tabs, filters, a scrolling table and pagination. */
-export function MembersTab({ workspaceId, roles, sections, permissions }: MembersTabProps) {
+export function MembersTab({ workspaceId, roles, sections, permissions, defaultRoleId }: MembersTabProps) {
   const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
   const [searchText, setSearchText] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<{ key: string; page: WorkspaceMemberPage } | null>(null);
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [sent, setSent] = useState<InvitationSent | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [revoking, setRevoking] = useState<InvitationInfo | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const key = `${attempt}:${JSON.stringify(filters)}`;
 
@@ -160,8 +172,30 @@ export function MembersTab({ workspaceId, roles, sections, permissions }: Member
   const from = total === 0 ? 0 : filters.page * PAGE_SIZE + 1;
   const to = Math.min(total, (filters.page + 1) * PAGE_SIZE);
   const counts = page?.counts;
-  const canAdd =
-    hasPermission(permissions, PERMISSION.workspaceMembersCreate) || hasPermission(permissions, PERMISSION.workspaceMembersInvite);
+  const canInvite = hasPermission(permissions, PERMISSION.workspaceMembersInvite);
+  const reload = () => setAttempt((value) => value + 1);
+
+  const resend = (invitation: InvitationInfo) => {
+    resendInvitation(workspaceId, invitation.id)
+      .then((result) => {
+        setSent(result);
+        setToast(`Invitation sent again to ${invitation.email}`);
+        reload();
+      })
+      .catch((error: unknown) => setToast(getErrorMessage(error)));
+  };
+
+  const revoke = () => {
+    if (!revoking) return;
+    setBusy(true);
+    revokeInvitation(workspaceId, revoking.id)
+      .then(reload)
+      .catch((error: unknown) => setToast(getErrorMessage(error)))
+      .finally(() => {
+        setBusy(false);
+        setRevoking(null);
+      });
+  };
 
   const roleName = roles.find((r) => r.id === filters.roleId)?.name ?? 'All';
   const sectionName = sections.find((s) => s.id === filters.sectionId)?.name ?? 'All';
@@ -177,16 +211,14 @@ export function MembersTab({ workspaceId, roles, sections, permissions }: Member
         >
           <Tab value="ALL" label={<TabLabel text="All members" count={counts?.all} active={filters.status === 'ALL'} />} />
           <Tab value="ACTIVE" label={<TabLabel text="Active" count={counts?.active} active={filters.status === 'ACTIVE'} />} />
-          {/* Invitations (the invitations table) are not part of the list yet. */}
-          <Tab value="INVITED" label="Invited" disabled />
+          <Tab value="INVITED" label={<TabLabel text="Invited" count={counts?.invited} active={filters.status === 'INVITED'} />} />
           <Tab
             value="DEACTIVATED"
             label={<TabLabel text="Deactivated" count={counts?.deactivated} active={filters.status === 'DEACTIVATED'} />}
           />
         </Tabs>
-        {canAdd && (
-          // Opens the add-user flow; it is specified later, so the button has no action yet.
-          <Button variant="contained" startIcon={<PersonAddIcon />} sx={{ position: 'absolute', right: 2, top: -22, height: 40, minWidth: 140, fontWeight: 500 }}>
+        {canInvite && (
+          <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => setAdding(true)} sx={{ position: 'absolute', right: 2, top: -22, height: 40, minWidth: 140, fontWeight: 500 }}>
             Add user
           </Button>
         )}
@@ -255,12 +287,13 @@ export function MembersTab({ workspaceId, roles, sections, permissions }: Member
           <FilterSelect
             label="Status"
             value={filters.status}
-            valueLabel={filters.status === 'ALL' ? 'All' : filters.status === 'ACTIVE' ? 'Active' : 'Deactivated'}
+            valueLabel={STATUS_LABELS[filters.status]}
             width={150}
             onChange={(value) => update({ status: value as MemberStatusFilter })}
           >
             <MenuItem value="ALL">All</MenuItem>
             <MenuItem value="ACTIVE">Active</MenuItem>
+            <MenuItem value="INVITED">Invited</MenuItem>
             <MenuItem value="DEACTIVATED">Deactivated</MenuItem>
           </FilterSelect>
           <Select
@@ -289,10 +322,15 @@ export function MembersTab({ workspaceId, roles, sections, permissions }: Member
 
         {failed ? (
           <Box sx={{ flex: 1, minHeight: 0 }}>
-            <LoadError message={failed} onRetry={() => setAttempt((value) => value + 1)} />
+            <LoadError message={failed} onRetry={reload} />
           </Box>
         ) : (
-          <MembersTable members={page?.items ?? []} loading={loading} ready={page !== undefined} />
+          <MembersTable
+            members={page?.items ?? []}
+            loading={loading}
+            ready={page !== undefined}
+            invitationActions={canInvite ? { onResend: resend, onRevoke: setRevoking } : null}
+          />
         )}
 
         <Box sx={{ height: 56, flexShrink: 0, px: 2, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, borderTop: 1, borderColor: 'divider' }}>
@@ -307,6 +345,31 @@ export function MembersTab({ workspaceId, roles, sections, permissions }: Member
           </IconButton>
         </Box>
       </Box>
+
+      <AddUserDialog
+        open={adding}
+        workspaceId={workspaceId}
+        roles={roles}
+        defaultRoleId={defaultRoleId}
+        onClose={() => setAdding(false)}
+        onSent={(result) => {
+          setSent(result);
+          setToast(`Invitation sent to ${result.invitation.email}`);
+          reload();
+        }}
+      />
+      <InvitationLinkDialog sent={sent} onClose={() => setSent(null)} />
+      <ConfirmDialog
+        open={revoking !== null}
+        title="Withdraw invitation?"
+        message={`The link sent to ${revoking?.email ?? ''} stops working. You can invite the address again later.`}
+        confirmLabel="Withdraw"
+        destructive
+        busy={busy}
+        onConfirm={revoke}
+        onClose={() => setRevoking(null)}
+      />
+      <ErrorToast message={toast} severity="success" onClose={() => setToast(null)} />
     </Box>
   );
 }

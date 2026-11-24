@@ -13,6 +13,11 @@ export const LIMITS = {
   logoBytes: 2 * 1024 * 1024,
   logoMinPixels: 128,
   memberSearch: 100,
+  userName: 80,
+  email: 254,
+  passwordMin: 10,
+  /** bcrypt ignores everything after 72 bytes, so longer passwords are refused. */
+  passwordMax: 72,
   issueTitle: 200,
   commentBody: 5000,
   effortHoursMax: 999,

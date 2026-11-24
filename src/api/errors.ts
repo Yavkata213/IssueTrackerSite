@@ -1,8 +1,8 @@
-export type ApiErrorCode = 'NOT_FOUND' | 'FORBIDDEN' | 'VALIDATION';
+export type ApiErrorCode = 'UNAUTHENTICATED' | 'NOT_FOUND' | 'FORBIDDEN' | 'VALIDATION';
 
 /**
  * Error the API layer throws. The real backend maps to it: 404 -> NOT_FOUND,
- * 403 -> FORBIDDEN, 400/422 -> VALIDATION. The message is safe to show to the user.
+ * 401 -> UNAUTHENTICATED, 403 -> FORBIDDEN, 400/422 -> VALIDATION. The message is safe to show to the user.
  * A VALIDATION error can name the form `field` it belongs to, so the form shows it there.
  */
 export class ApiError extends Error {

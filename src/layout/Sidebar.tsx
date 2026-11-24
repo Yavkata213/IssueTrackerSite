@@ -3,6 +3,7 @@ import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import FirstPageIcon from '@mui/icons-material/FirstPage';
 import HistoryIcon from '@mui/icons-material/History';
 import AddIcon from '@mui/icons-material/Add';
+import LogoutIcon from '@mui/icons-material/Logout';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import PushPinIcon from '@mui/icons-material/PushPin';
@@ -10,16 +11,20 @@ import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import SettingsIcon from '@mui/icons-material/Settings';
 import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useMatch } from 'react-router-dom';
 import { paths, routePatterns } from '../app/paths';
+import { useAuth } from '../app/authContext';
 import { useWorkspace } from '../app/workspaceContext';
-import { CountBadge, SectionIcon, UserAvatar } from '../components/common';
+import { CountBadge, SectionIcon, UserAvatar, useThemeModeItems } from '../components/common';
 import type { SidebarSection } from '../types';
 import { hasPermission, PERMISSION } from '../utils/permissions';
 import { JumpTo } from './sidebar/JumpTo';
@@ -77,6 +82,9 @@ export function Sidebar() {
   const { currentUser, workspace, sections, unreadCount } = useWorkspace();
   const { toggleSidebar } = useShell();
   const [filter, setFilter] = useState('');
+  const [userMenu, setUserMenu] = useState<HTMLElement | null>(null);
+  const { signOut } = useAuth();
+  const themeItems = useThemeModeItems(() => setUserMenu(null));
   // `end: false` keeps the section active on its sub-pages (settings) too.
   const sectionMatch = useMatch({ path: routePatterns.section, end: false });
   // The full page of an issue (IT-142) keeps its section selected in the sidebar.
@@ -125,7 +133,7 @@ export function Sidebar() {
             to={paths.inbox}
             label="Inbox"
             icon={<NotificationsIcon />}
-            trailing={unreadCount > 0 ? <CountBadge count={unreadCount} background="#EBEBEB" /> : undefined}
+            trailing={unreadCount > 0 ? <CountBadge count={unreadCount} /> : undefined}
           />
           <NavItem to={paths.assigned} label="Assigned to me" icon={<AssignmentIndIcon />} />
           <NavItem to={paths.presets} label="Presets" icon={<BookmarkBorderIcon />} />
@@ -218,9 +226,28 @@ export function Sidebar() {
             {userSubtitle}
           </Typography>
         </Box>
-        <IconButton aria-label="User menu" size="small">
+        <IconButton aria-label="User menu" aria-haspopup="menu" size="small" onClick={(event) => setUserMenu(event.currentTarget)}>
           <MoreVertIcon />
         </IconButton>
+        <Menu anchorEl={userMenu} open={userMenu !== null} onClose={() => setUserMenu(null)} anchorOrigin={{ vertical: 'top', horizontal: 'right' }} transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+          <MenuItem disabled sx={{ opacity: '1 !important' }}>
+            <Typography variant="caption" color="text.secondary">
+              {currentUser.email}
+            </Typography>
+          </MenuItem>
+          <Divider />
+          {themeItems}
+          <Divider />
+          <MenuItem
+            onClick={() => {
+              setUserMenu(null);
+              void signOut();
+            }}
+          >
+            <LogoutIcon fontSize="small" sx={{ mr: 1.5 }} />
+            Sign out
+          </MenuItem>
+        </Menu>
       </Box>
     </Box>
   );

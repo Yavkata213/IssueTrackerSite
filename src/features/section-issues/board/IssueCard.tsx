@@ -52,7 +52,7 @@ export function IssueCard({ issue, issueKey, categories, assignees }: IssueCardP
                 height: 22,
                 borderRadius: '11px',
                 fontSize: 12,
-                borderColor: 'rgba(0, 0, 0, 0.23)',
+                borderColor: 'surface.fieldBorder',
                 '& .MuiChip-label': { pl: '6px', pr: '12px' },
                 '& .MuiChip-icon': { ml: '10px', mr: 0 },
               }}

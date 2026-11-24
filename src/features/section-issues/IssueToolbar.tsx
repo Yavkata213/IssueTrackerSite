@@ -71,7 +71,7 @@ export function IssueToolbar({
             borderRadius: '14px',
             bgcolor: 'background.paper',
             '& .MuiChip-label': { px: 2 },
-            borderColor: 'rgba(0, 0, 0, 0.23)',
+            borderColor: 'surface.fieldBorder',
             ...(filters.onlyMine && {
               color: 'primary.main',
               borderColor: 'primary.main',

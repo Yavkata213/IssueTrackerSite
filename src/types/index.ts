@@ -22,6 +22,8 @@ export type RichTextDoc = RichTextNode & { type: 'doc' };
 export type Priority = 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 export type RoleScope = 'WORKSPACE' | 'SECTION';
 export type MemberStatus = 'ACTIVE' | 'DEACTIVATED';
+/** A row of the members table: a member, or a person who was invited and has not joined yet. */
+export type MemberRowStatus = MemberStatus | 'INVITED';
 export type PresetViewType = 'BOARD' | 'TABLE';
 
 export interface User {
@@ -268,6 +270,49 @@ export interface IssuePatch {
   dueDate?: IsoDate | null;
 }
 
+// ---- Accounts and invitations -------------------------------------------
+
+export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED';
+
+/** What the members table knows about a pending invitation. */
+export interface InvitationInfo {
+  id: Uuid;
+  email: string;
+  invitedByName: string | null;
+  expiresAt: IsoTimestamp;
+  /** True when the link ran out before it was used. */
+  expired: boolean;
+}
+
+/**
+ * What the invitation page may show to whoever holds the link: enough to decide, no more.
+ * `accountExists` tells the page whether to ask for a new password or for a sign-in.
+ */
+export interface InvitationPreview {
+  email: string;
+  workspaceName: string;
+  workspaceLogoUrl: string | null;
+  invitedByName: string | null;
+  roleName: string;
+  accountExists: boolean;
+}
+
+/** An open invitation sent to the signed-in person's own email (shown when they have no workspace). */
+export interface MyInvitation {
+  id: Uuid;
+  workspaceName: string;
+  workspaceLogoUrl: string | null;
+  invitedByName: string | null;
+  roleName: string;
+  expiresAt: IsoTimestamp;
+}
+
+/** Result of sending an invitation. `devLink` exists only in the mock: the real backend emails the link. */
+export interface InvitationSent {
+  invitation: InvitationInfo;
+  devLink: string | null;
+}
+
 // ---- Workspace settings -------------------------------------------------
 
 /** A section role a member has, shown as a chip: "<section name> <role name>". */
@@ -282,7 +327,9 @@ export interface WorkspaceMember {
   user: User;
   roleId: Uuid;
   roleName: string;
-  status: MemberStatus;
+  status: MemberRowStatus;
+  /** Set on rows with status `INVITED`; then `user` only carries the email. */
+  invitation: InvitationInfo | null;
   joinedAt: IsoTimestamp;
   /** Last request in THIS workspace (workspace_members.last_active_at); null = never. */
   lastActiveAt: IsoTimestamp | null;
@@ -290,7 +337,7 @@ export interface WorkspaceMember {
 }
 
 export type MemberSort = 'name' | 'lastActive' | 'joined';
-export type MemberStatusFilter = 'ALL' | MemberStatus;
+export type MemberStatusFilter = 'ALL' | MemberRowStatus;
 
 /** Query of the members table. Filtering, sorting and paging happen on the server. */
 export interface WorkspaceMemberQuery {
@@ -311,7 +358,7 @@ export interface WorkspaceMemberPage {
   /** Rows that match the query, over all pages. */
   total: number;
   /** Tab counters: not affected by the filters. */
-  counts: { all: number; active: number; deactivated: number };
+  counts: { all: number; active: number; invited: number; deactivated: number };
 }
 
 /** Everything the General and Roles tabs of the workspace settings need. */

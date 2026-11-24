@@ -9,12 +9,15 @@ import {
   setSectionPinned as apiSetSectionPinned,
 } from '../api';
 import { ErrorToast, LoadError } from '../components/common';
+import { NoWorkspacePage } from '../features/onboarding/NoWorkspacePage';
 import type { SidebarSection, User, WorkspaceSummary } from '../types';
 import { WorkspaceContext } from './workspaceContext';
 import type { WorkspaceContextValue } from './workspaceContext';
 
 interface WorkspaceProviderProps {
   children: ReactNode;
+  /** Opened first when the user belongs to it (right after accepting an invitation). */
+  preferredWorkspaceId?: string;
 }
 
 /** Sidebar data of one workspace. Tagged with the workspace so it is never shown for another. */
@@ -24,7 +27,7 @@ interface SidebarData {
   unread: number;
 }
 
-export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
+export function WorkspaceProvider({ children, preferredWorkspaceId }: WorkspaceProviderProps) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
@@ -32,6 +35,8 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
+  // The workspace to open when the list is (re)loaded: the one the person just joined or created.
+  const [wantedId, setWantedId] = useState<string | undefined>(preferredWorkspaceId);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,7 +45,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         if (cancelled) return;
         setCurrentUser(user);
         setWorkspaces(list);
-        setWorkspaceId(list[0]?.id ?? null);
+        setWorkspaceId((list.find((w) => w.id === wantedId) ?? list[0])?.id ?? null);
       })
       .catch((error: unknown) => {
         if (!cancelled) setLoadError(getErrorMessage(error));
@@ -48,7 +53,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     return () => {
       cancelled = true;
     };
-  }, [attempt]);
+  }, [attempt, wantedId]);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -126,6 +131,17 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   }, [currentUser, workspace, workspaces, current, setSectionPinned, reloadSections, reloadWorkspaces]);
 
   if (loadError) return <LoadError message={loadError} onRetry={retry} />;
+  // Signed in, but not in any workspace yet (for example the only one removed them).
+  if (currentUser && workspaces.length === 0) {
+    return (
+      <NoWorkspacePage
+        onEntered={(workspaceId) => {
+          setWantedId(workspaceId);
+          retry();
+        }}
+      />
+    );
+  }
   if (!value) return null;
   return (
     <WorkspaceContext.Provider value={value}>
