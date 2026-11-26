@@ -3,6 +3,7 @@ export { CategoryChips } from './CategoryChips';
 export { ConfirmDialog } from './ConfirmDialog';
 export { CountBadge } from './CountBadge';
 export { DueDateLabel } from './DueDateLabel';
+export { DevLink } from './DevLink';
 export { ErrorToast } from './ErrorToast';
 export { LoadError } from './LoadError';
 export { PriorityChip } from './PriorityChip';

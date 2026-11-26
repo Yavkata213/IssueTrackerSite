@@ -9,7 +9,7 @@ import { Link as RouterLink, Navigate } from 'react-router-dom';
 import { ApiError, getErrorMessage, resendVerificationEmail, signUp } from '../../api';
 import { useAuth } from '../../app/authContext';
 import { paths } from '../../app/paths';
-import { AuthLayout } from '../../components/common';
+import { AuthLayout, DevLink } from '../../components/common';
 import { checkPassword, isValidEmail } from '../../utils/accounts';
 import { LIMITS } from '../../utils/limits';
 import { PasswordField } from './PasswordField';
@@ -91,15 +91,7 @@ export function SignUpPage() {
             {formError}
           </Alert>
         )}
-        {/* The mock backend has no mailbox: in development the link is shown here. The real backend only emails it. */}
-        {import.meta.env.DEV && sent.devLink && (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            Development only:{' '}
-            <Link href={sent.devLink} underline="hover">
-              open the confirmation link
-            </Link>
-          </Alert>
-        )}
+        <DevLink link={sent.devLink} label="open the confirmation link" />
         <Button variant="outlined" fullWidth sx={{ mt: 2 }} onClick={sendAgain}>
           Send the email again
         </Button>

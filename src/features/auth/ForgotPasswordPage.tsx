@@ -10,7 +10,7 @@ import { getErrorMessage, requestPasswordReset } from '../../api';
 import { paths } from '../../app/paths';
 import { isValidEmail } from '../../utils/accounts';
 import { LIMITS } from '../../utils/limits';
-import { AuthLayout } from '../../components/common';
+import { AuthLayout, DevLink } from '../../components/common';
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -45,15 +45,7 @@ export function ForgotPasswordPage() {
         <Alert severity="info">
           If there is an account for {email.trim()}, a link to choose a new password is on its way. It works for one hour.
         </Alert>
-        {/* The mock backend has no mailbox: in development the link is shown here. The real backend only emails it. */}
-        {import.meta.env.DEV && sent.devLink && (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            Development only:{' '}
-            <Link href={sent.devLink} underline="hover">
-              open the reset link
-            </Link>
-          </Alert>
-        )}
+        <DevLink link={sent.devLink} label="open the reset link" />
       </AuthLayout>
     );
   }

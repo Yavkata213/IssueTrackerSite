@@ -12,7 +12,7 @@ import { paths } from '../../app/paths';
 import { isValidEmail } from '../../utils/accounts';
 import { LIMITS } from '../../utils/limits';
 import { safeInternalPath } from '../../utils/redirect';
-import { AuthLayout } from '../../components/common';
+import { AuthLayout, DevLink } from '../../components/common';
 import { PasswordField } from './PasswordField';
 
 interface SignInState {
@@ -88,15 +88,7 @@ export function SignInPage() {
         {resent && (
           <Alert severity="success">
             If this account still needs confirming, a new message is on its way.
-            {/* The mock backend has no mailbox: in development the link is shown here. */}
-            {import.meta.env.DEV && resent.devLink && (
-              <>
-                {' '}
-                <Link href={resent.devLink} underline="hover">
-                  Development only: open the link
-                </Link>
-              </>
-            )}
+            <DevLink link={resent.devLink} label="open the confirmation link" />
           </Alert>
         )}
         <TextField

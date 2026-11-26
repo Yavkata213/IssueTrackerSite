@@ -30,7 +30,7 @@ only). Their emails follow `first.last.N@acme.example` / `@globex.example`.
   (a second one is `/invitations/demo-invite-ivan-stoyanov-1c9e`).
 - **Invitation for an existing account:** as Maria, *Add user* with `andrey.ivanov.0@globex.example`.
   The mock shows the link in a dialog (development only). Open it signed out, sign in, and join.
-- **Sign up** (`/sign-up`): the account cannot sign in until its email is confirmed. The mock shows the confirmation link on the confirmation page (development only). Signing up with `daniel.hristov@acme.example` shows the open invitation on the next screen.
+- **Sign up** (`/sign-up`): the account cannot sign in until its email is confirmed. The mock has no mailbox: the confirmation page shows a development-only link, followed inside the app (never open mock links in a new tab: a reload erases the mock data).
 - **No workspace yet:** a signed-in account without a workspace sees its invitations and can create a workspace (it gets the default roles and a first section, General).
 - **Forgot password:** `/forgot-password`. The mock shows the reset link on the confirmation page
   (development only).
